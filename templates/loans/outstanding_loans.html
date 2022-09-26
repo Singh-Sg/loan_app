@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load l10n %}
+{% load humanize %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+<style type="text/css">
+th.paid {
+    padding: 5px 3em;
+}
+td, th {
+    text-align: center;
+}
+span.submit {
+  background: #79aec8;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+span.error {
+  color: red;
+}
+input.amount {
+  width: 4em;
+}
+</style>
+{% endblock %}
+
+{% block title %}
+Outstanding Loans
+{% endblock %}
+
+{% block content %}
+        <div id="content">
+        <h1>
+            Outstanding Loans (total: {{ total_outstanding|floatformat|intcomma }} ks)
+        </h1>
+{% if outstanding_loans %}
+    <table border="1px" id="myTable" class="tablesorter">
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>Loan id</th>
+            <th>Agent</th>
+            <th>borrower</th>
+            <th>Loan Amount</th>
+            <th>Contract#</th>
+            <th>Outstanding amount</th>
+            <th>Loan state</th>
+            <th>Loan requested on</th>
+            <th>Repaid on</th>
+            <th>Days late</th>
+            <th>Amount due today</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for l in outstanding_loans %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ l.obj.id }}</td>
+            <td><a href="{% url 'admin:borrowers_agent_change' l.obj.borrower.agent.pk %}">{{ l.obj.borrower.agent.name }}</a></td>
+            <td><a href="{% url 'admin:borrowers_borrower_change' l.obj.borrower.pk %}">{{ l.obj.borrower.name_en }} - {{ l.obj.borrower.name_mm }}</a></td>
+            <td>{{ l.obj.loan_amount|floatformat }}</td>
+            <td><a href="{% url 'admin:loans_loan_change' l.obj.pk %}">{{ l.obj.contract_number }}</a></td>
+            <td>{{ l.obj.outstanding|floatformat|default:'0' }}</td>
+            <td>{{ l.obj.state }}</td>
+            <td>{{ l.obj.uploaded_at|date:"d-m-y" }}</td>
+            <td>{{ l.obj.repaid_on }}</td>
+            <td>{{ l.obj.get_delay }}</td>
+            <td>{{ l.amount_due|floatformat }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No loan request.</p>
+{% endif %}
+
+        </div>
+{% endblock %}
+
+{% block javascript %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.29.2/js/jquery.tablesorter.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.29.2/css/theme.default.min.css" type="text/css" media="print, projection, screen" />
+    <script>
+    $(document).ready(function()
+        {
+            $("#myTable").tablesorter();
+        }
+    );
+    </script>
+{% endblock %}
+
+

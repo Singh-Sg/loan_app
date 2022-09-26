@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+<style type="text/css">
+th.paid {
+    padding: 5px 3em;
+}
+td, th {
+    text-align: center;
+}
+span.submit {
+  background: #79aec8;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+span.error {
+  color: red;
+}
+input.amount {
+  width: 4em;
+}
+</style>
+{% endblock %}
+
+{% block title %}
+Loan request sheet for {{ day }}
+{% endblock %}
+
+{% block content %}
+        <div id="content">
+        <h1>
+            Signed loan requests for disbursement sheet for {{ day }}
+        </h1>
+{% if collection_list %}
+    <table border="1px">
+        <thead>
+        <tr>
+            <th colspan=6>{{ day|localize }}</th>
+        </tr>
+        <tr>
+            <th>Agent Id</th>
+            <th>Agent Name</th>
+            <th>Total Amount By Agent</th>
+            <th>Borrower Id</th>
+            <th>Borrower</th>
+            <th>Loan Amount</th>
+            <th>Contract#</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in collection_list %}
+        <tr>
+            <td>{{ row.agent.id}}</td>
+            <td>{{ row.agent.name }}</td>
+            <td>{{ total_amount_by_agent|get_dict_item:row.agent.name }}</td>
+            <td>{{ row.borrower.id }}</td>
+            <td><a href="{% url 'admin:borrowers_borrower_change' row.borrower.pk %}">
+                {{ row.borrower.name_en }} - {{ row.borrower.name_mm }}</a></td>
+            <td>{{ row.loan.loan_amount }}</td>
+            <td><a href="{% url 'admin:loans_loan_change' row.loan.pk %}">{{ row.loan.contract_number }}</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No signed loan requests.</p>
+{% endif %}
+
+        </div>
+{% endblock %}
+
+

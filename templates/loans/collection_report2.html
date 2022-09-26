@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+        <title>
+            ZigWay - Collection report for {{ date }}
+        </title>
+    </head>
+
+    <body>
+        <div id="content">
+        <h1>
+            ZigWay - Collection report for {{ date }}
+        </h1>
+{% if collection_list %}
+    <table border="1px">
+        <thead>
+            <tr>
+            <th>Borrower #</th>
+            <th>Borrower name</th>
+            <th>Contract No</th>
+            <th>Loan cycle</th>
+            <th>Principal due</th>
+            <th>Fees due</th>
+            <th>Amount collected</th>
+            <th>Amount overdue</th>
+            <th>Total repaid</th>
+            <th>Amount disbursed</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for loan in collection_list %}
+        <tr>
+            <td>{{ loan.borrower.borrower_number }}</td>
+            <td>{{ loan.borrower.name_en }}</td>
+            <td>{{ loan.contract_number }}</td>
+            <td>{{ loan.borrower.loan_cycle }}</td>
+            <td>{{ loan.outstanding_amount.principal }}</td>
+            <td>{{ loan.outstanding_amount.fee }}</td>
+            <td><!-- blank --></td>
+            <td>{{ loan.amount_overdue }}</td>
+            <td>{{ loan.total_repaid }}</td>
+            <td>{{ loan.loan_amount }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No loans to be repaid on those dates.</p>
+{% endif %}
+
+        </div>
+    </body>
+</html>

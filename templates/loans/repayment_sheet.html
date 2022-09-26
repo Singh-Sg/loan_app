@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+<style type="text/css">
+th.paid {
+    padding: 5px 3em;
+}
+td, th {
+    text-align: center;
+}
+span.submit {
+  background: #79aec8;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+span.error {
+  color: red;
+}
+input.amount {
+  width: 4em;
+}
+</style>
+{% endblock %}
+
+{% block title %}
+Repayment sheet for {{ day }}
+{% endblock %}
+
+{% block content %}
+        <div id="content">
+        <h1>
+            Repayment sheet for {{ day }}
+        </h1>
+{% if collection_list %}
+    <table border="1px">
+        <thead>
+        <tr><th></th>
+            <th colspan=2>{{ day|localize }}</th>
+        </tr>
+        <tr><th>Borrower name</th>
+            <th>Planned</th>
+            <th>Already paid that day</th>
+            <th class="paid">Pay</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in collection_list %}
+        {% if row.scheduled_repayment > 0 %}
+        <tr>
+            <td>{{ row.borrower.name_en }} - {{ row.borrower.name_mm }}</td>
+            <td>{{ row.scheduled_repayment|floatformat:"0" }}</td>
+            <td>{{ row.actual_repayment|floatformat:"0" }}</td>
+            <td>
+                <form action="{% url 'loans:register-payment' %}" method="post">
+                    {% csrf_token %}
+                    <input type="text" class="amount" name="amount" id="amount_{{ forloop.counter }}" value="{{ row.scheduled_repayment|floatformat:"0" }}" />
+                    <span class="submit" data-date="{{ day.isoformat }}" data-loan="{{ row.loan_pk }}">Repay</span>
+                </form>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No loans to be repaid on those dates.</p>
+{% endif %}
+
+        </div>
+{% endblock %}
+
+{% block javascript %}
+ <script>
+$('form > span.submit').click(function () {
+    payload = $(this).data();
+    payload['amount'] = $(this).prev().val();
+
+$.ajax({
+    url: '/loans/register-payment/',
+    type: 'POST',
+    data: payload,
+    dataType: 'json',
+    context: this,
+    success: function (data) {
+      if (data.result == 'ok') {
+          $(this).html('Paid');
+          $(this).removeClass('submit');
+          $(this).unbind("click");
+      } else if (data.error) {
+          console.log(data);
+          $(this).html('Error');
+          $(this).removeClass('submit').addClass('error');
+          $(this).unbind("click");
+      }
+    },
+    error : function(xhr,errmsg,err) {
+      console.log(xhr.status + ": " + xhr.responseText);
+      $(this).html('Error');
+      $(this).removeClass('submit').addClass('error');
+      $(this).unbind("click");
+    }
+  });
+});
+</script>
+{% endblock %}

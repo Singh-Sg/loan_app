@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+<style type="text/css">
+th.paid {
+    padding: 5px 3em;
+}
+td, th {
+    text-align: center;
+}
+span.submit {
+  background: #79aec8;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+span.error {
+  color: red;
+}
+input.amount {
+  width: 4em;
+}
+</style>
+{% endblock %}
+
+{% block title %}
+Loan request sheet for {{ day }}
+{% endblock %}
+
+{% block content %}
+        <div id="content">
+        <h1>
+            Disburse approved loans sheet for {{ day }}
+        </h1>
+{% if collection_dict %}
+    {% for agent,data in collection_dict.items %}
+        {# for agent id, it need to be extracted from data since agent is string #}
+        <h3 data-agent-id="{{ data.0.agent.id }}">Agent: <a href="{% url 'admin:borrowers_agent_change' data.0.agent.id %}">{{ agent }}</a></h3>
+        <table border="1px">
+            <thead>
+            <tr>
+                <th colspan=11>{{ day|localize }}</th>
+            </tr>
+
+            <tr>
+                <th>Agent Id</th>
+                <th>Agent Name</th>
+                <th>Borrower Name</th>
+                <th>Loan Amount</th>
+                <th>Request date</th>
+                <th>Contract#</th>
+                <th>Status</th>
+                <th>Phone number(s)</th>
+                <th>Borrower Profile Photo</th>
+                <th>Signature Photo</th>
+                <th>Disburse?</th>
+            </tr>
+            </thead>
+
+            <tbody>
+                {% for row in data %}
+                    <tr>
+                        <td>{{ row.agent.id}}</td>
+                        <td><p>{{ row.agent.name }}</p>{{ row.agent.phone_number }}</td>
+                        <td><a href="{% url 'admin:borrowers_borrower_change' row.borrower.pk %}">{{ row.borrower.name_en }} - {{ row.borrower.name_mm }}</a></td>
+                        <td>{{ row.loan.loan_amount|floatformat }}</td>
+                        <td>{{ row.loan.uploaded_at|date:"d M y" }}</td>
+                        <td><a href="{% url 'admin:loans_loan_change' row.loan.pk %}">{{ row.loan.contract_number }}</a></td>
+                        <td>{{ row.loan.state }}</td>
+                        <td><ul><li>{{ row.loan.borrower.phone_number_mpt }}</li><li>{{ row.loan.borrower.phone_number_ooredoo }}</li><li>{{ row.loan.borrower.phone_number_telenor }}</li></ul></td>
+                        <td>{{ row.loan.borrower.borrower_photo_tag }}</td>
+                        <td>{% if row.signature %}{{ row.signature.signature_photo_tag }}{% else %}No signature{% endif %}</td>
+                        <td>{% if not row.loan.disbursement %}
+                        <input data-loan-id="{{ row.loan.id }}" data-loan-amount="{{ row.loan.loan_amount|floatformat }}" type="checkbox">
+                        {% else %}Already disbursed
+                        {% endif %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <br/>
+        <form  method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            {# for agent id, it need to be extracted from data since agent is string #}
+<!--             {# options for KBZ method #} -->
+            <!-- <div class="kbz" hidden>
+                <p>
+                    <label for="recipient_name">Recipient Name:</label>
+                    <input name="recipient_name" value="{{ data.0.agent.name }}" required/>
+                </p>
+                <p>
+                    <label for="recipient_phone_number">Recipient Phone Number:</label>
+                    <input type="tel" name="recipient_phone_number" value="{{ data.0.agent.phone_number }}" required/>
+                </p>
+                <p>
+                    <label for="recipient_NRC_number">Recipient NRC Number:</label>
+                    <input name="recipient_NRC_number" value="{{ data.0.agent.nrc_number }}" required/>
+                </p>
+            </div>
+
+            {# options for WaveP2P method #}
+            <div class="wave" hidden>
+                <p>
+                    <label for="recipient_number">Recipient Number:</label>
+                    <input type="tel" name="recipient_number" value="{{ data.0.agent.wave_money_number }}" required/>
+                </p>
+                <p>
+                    <label for="sender_number">Sender Number:</label>
+                    <select name="sender_number">
+                        <option selected>09773092725</option>
+                        <option>09761818741</option>
+                    </select>
+                </p>
+            </div> -->
+
+            <span class="submit">Create</span>
+        </form>
+        <br/>
+        {# size attribute for hr is deprecated in HTML5. https://stackoverflow.com/a/4151770/8211573 #}
+        <hr style="height:2px;border:none;color:#333;background-color:#333;" />
+        
+    {% endfor %}
+{% else %}
+    <p>No loan request.</p>
+{% endif %}
+
+        </div>
+{% endblock %}
+
+{% block javascript %}
+ <script>
+$(document).ready(function() {
+    // set default choice for 'disbursed_to'
+    $("select[name='disbursed_to']").val(function(){
+        return $(this).parents("form").prevAll("h3").first().data("agent-id");
+    });
+
+    // set default zero value for 'amount' and 'fees_paid'
+    $('input[name="amount"]').val(0);
+    $('input[name="fees_paid"]').val(0);
+
+    // set disabled for amount field (used disabled instead of readonly for visual purpose)
+    $('input[name="amount"]').prop('disabled', true);
+
+    // uncheck check boxes
+    $('input[type="checkbox"]').prop('checked', false);
+
+    // to avoid inconsistencies between method and hidden fields when the page reloads
+    $('select[name="method"]').val(1)
+});
+
+$('input[type="checkbox"]').click(function(){
+    var checked = $(this).prop('checked');
+    var loan_amount = $(this).data('loan-amount');
+    $(this).parentsUntil("h3","table").nextUntil("hr","form").find('input[name="amount"]').val(function(_, val){
+        if (checked) {
+            return Number(val) + loan_amount;
+        } else {
+            return Number(val) - loan_amount;
+        }
+    });
+});
+
+// show or hide fields according to 'method'
+/*$('select[name="method"]').change(function(){
+    // cash at agent
+    if ($(this).val() == "1"){
+        $(this).parent().siblings('.kbz').hide()
+        $(this).parent().siblings('.wave').hide()
+    }
+    // kbz
+    if ($(this).val() == "2"){
+        $(this).parent().siblings('.kbz').show()
+        $(this).parent().siblings('.wave').hide()
+    }
+    // wave
+    if ($(this).val() == "3"){
+        $(this).parent().siblings('.kbz').hide()
+        $(this).parent().siblings('.wave').show()
+    }
+});*/
+
+$('form > span.submit').click(function () {
+    var payload = {};
+    payload['amount'] = $(this).parent().find('input[name="amount"]').val();
+
+    // check if amount is 0
+    if (payload['amount'] == 0){
+        $(".amount_zero_error").remove();
+        $(this).after('<span class="error amount_zero_error">Amount cannot be 0</span>');   
+        return
+    }
+    else {
+        $(".amount_zero_error").hide();
+    }
+
+    payload['disbursed_to'] = $(this).parent().find('select[name="disbursed_to"]').val();
+    payload['fees_paid'] = $(this).parent().find('input[name="fees_paid"]').val();
+    payload['method'] = $(this).parent().find('select[name="method"]').val();
+
+    payload['details'] = {}
+    // details for KBZ
+/*    if (payload['method'] == "2"){
+        payload['details']['recipient_name'] = $(this).parent().find('input[name="recipient_name"]').val();
+        payload['details']['recipient_phone_number'] = $(this).parent().find('input[name="recipient_phone_number"]').val();
+        payload['details']['recipient_NRC_number'] = $(this).parent().find('input[name="recipient_NRC_number"]').val();
+    }
+    // details for WaveP2P
+    else if (payload['method'] == "3"){
+        payload['details']['recipient_number'] = $(this).parent().find('input[name="recipient_number"]').val();
+        payload['details']['sender_number'] = $(this).parent().find('select[name="sender_number"]').val();
+    }*/
+
+    // check checkboxes and collect loan id(s) for loans_disbursed
+    var loans_disbursed = $(this).parent().prevUntil("h3", "table").find('input:checked').map(function(){
+        return $(this).data("loan-id");
+    });
+    payload['loans_disbursed'] = $.makeArray(loans_disbursed);
+    payload['details']['loans'] = $.makeArray(loans_disbursed);
+    // object and array do not work properly without converting to json
+    payload = JSON.stringify(payload);
+
+$.ajax({
+    url: '/api/v1/disbursements/',
+    type: 'POST',
+    data: payload,
+    dataType: 'json',
+    contentType: 'application/json',
+    context: this,
+    success: function (data) {
+      if (data.error) {
+          console.log(data);
+          $(this).html('Error');
+          $(this).removeClass('submit').addClass('error');
+          $(this).unbind("click");
+      } else {
+          $(this).html('Created! <a href="/admin/loans/disbursement/' + data.id + '/">View Disbursement</a>');
+          $(this).removeClass('submit');
+          $(this).unbind("click");
+      }
+    },
+    error : function(xhr,errmsg,err) {
+      console.log(xhr.status + ": " + xhr.responseText);
+      $(this).html(xhr.responseText);
+      $(this).removeClass('submit').addClass('error');
+      $(this).unbind("click");
+    }
+  });
+});
+</script>
+{% endblock %}

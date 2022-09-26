@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+<style type="text/css">
+th.paid {
+    padding: 5px 3em;
+}
+td, th {
+    text-align: center;
+}
+
+</style>
+{% endblock %}
+
+{% block title %}
+Loan request sheet for {{ day }}
+{% endblock %}
+
+{% block content %}
+        <div id="content">
+        <h1>
+            Loan request sheet for {{ day }}
+        </h1>
+{% if collection_list %}
+    <table border="1px">
+        <thead>
+        <tr>
+            <th colspan=8>{{ day|localize }}</th>
+        </tr>
+        <tr>
+            <th>Agent Id</th>
+            <th>Agent Name</th>
+            <th>Borrower Name</th>
+            <th>Loan Amount</th>
+            <th>Request date </th>
+            <th>Contract#</th>
+            <th>Status</th>
+            <th>Phone number(s)</th>
+            <th>Borrower Profile Photo</th>
+            <th>Signature Photo</th>
+            <th>Approve Loan Requests</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in collection_list %}
+        <tr>
+            <td>{{ row.agent.id}}</td>
+            <td><p>{{ row.agent.name }}</p>{{ row.agent.phone_number }}</td>
+            <td><a href="{% url 'admin:borrowers_borrower_change' row.borrower.pk %}">{{ row.borrower.name_en }} - {{ row.borrower.name_mm }}</a></td>
+            <td>{{ row.loan.loan_amount|floatformat }}</td>
+            <td>{{ row.loan.uploaded_at|date:"d M y" }}</td>
+            <td><a href="{% url 'admin:loans_loan_change' row.loan.pk %}">{{ row.loan.contract_number }}</a></td>
+            <td>{{ row.loan.state }}</td>
+            <td><ul><li>{{ row.loan.borrower.phone_number_mpt }}</li><li>{{ row.loan.borrower.phone_number_ooredoo }}</li><li>{{ row.loan.borrower.phone_number_telenor }}</li></ul></td>
+            <td>{{ row.loan.borrower.borrower_photo_tag }}</td>
+            <td>{% if row.signature %}{{ row.signature.signature_photo_tag }}{% else %}No signature{% endif %}</td>
+            <td id="{{row.loan.id}}" data-id="{{ row.borrower.name_en }} - {{ row.borrower.name_mm }}">
+            {% if row.loan.state == 'signed' %}
+                <div class="btn btn-info showModel">
+                  Approve loan request
+                </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="modal fade" id="approve-model" role="dialog">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">Approve loan of &nbsp;"<span class="borrower_name"></span>"&nbsp;to</h4>
+            </div>
+            <div class="modal-body">
+            <form action="#" id="loan-request-review-form" method="post">
+                <input id="loan_id" type="hidden" required/>  
+                <div class="form-group">
+                  <div class="row">
+                    <div class="col-md-4 col-sm-4 col-xs-12">
+                      <label for="reminder">Please double-check that:</label>
+                    </div>
+                    <div class="col-md-8 col-sm-8 col-xs-12">
+                      <div class="alert alert-info">
+                        <p><strong>1. </strong>Loan amount is correct.</p>
+                        <p><strong>2. </strong>Repayment schedule is valid with previous delays.</p>
+                        <p><strong>3. </strong>Photos match.</p>
+                        <p><strong>4. </strong>Previous loan has been fully repaid.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <div class="row">
+                    <div class="col-md-4 col-sm-4 col-xs-12">
+                      <label for="comments">Comments:</label>
+                    </div>
+                    <div class="col-md-8 col-sm-8 col-xs-12">
+                      <input class="form-control" name="comments" />
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <div class="row">
+                    <div class="col-md-4 col-sm-4 col-xs-12">
+                      <label for="approve-loan">Approve:</label>
+                    </div>
+                    <div class="col-md-8 col-sm-8 col-xs-12">
+                        <label class="radio-inline">
+                          <input type="radio" name="approve" value="True"> Approve
+                        </label>
+                        <label class="radio-inline">
+                          <input type="radio" name="approve" value="False"> Reject
+                        </label>
+                    </div>
+                  </div>
+                </div>
+            </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-default btn-success float-right submit-loan-request-review" data-dismiss="modal">Submit</button>
+            </div>
+          </div>
+        </div>
+    </div>
+{% else %}
+    <p>No loan request.</p>
+{% endif %}
+
+        </div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+
+$(".showModel").click(function() {
+  $('#approve-model').modal('show')
+  $('#loan-request-review-form').trigger("reset")
+  $('.borrower_name').text($(this).parent().attr("data-id"))
+  $('#approve-model').find('#loan_id').val($(this).parent().attr('id'))
+});
+
+
+$(".submit-loan-request-review").click(function() {
+    loan=$('#loan_id').val()
+    comments=$('[name=comments]').val()
+    approve=$('[name=approve]:checked').val()
+    if(loan == '' || approve == undefined) {
+        return false;
+        }
+    $.ajax({
+        type: 'POST',
+        url: '/api/v1/loans/' + loan + '/approve/',
+        data: {
+                "loan": loan,
+                "approved": approve,
+                "comments": comments,
+                },
+        dataType: 'json',
+        success: function (data) {
+            // SweetAlert (swal) is a library to use and show alert messages.
+            swal("Success!", "The Loan has been successfully " + data.result, "success");
+            $('#' + loan).html("<div class='btn btn-success '>" + data.result + "</div>");
+        },
+        error: function(data) {
+            message=data.responseText.split('Exception Value:')[1].split('Request information')[0]
+            swal('Oops!', message, 'error');
+        }
+    });
+  });
+</script>
+{% endblock %}

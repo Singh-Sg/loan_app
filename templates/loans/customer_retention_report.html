@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load l10n %}
+{% load humanize %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css">
+<style type="text/css">
+th.paid {
+    padding: 5px 3em;
+}
+td, th {
+    text-align: center;
+}
+span.submit {
+  background: #79aec8;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+span.error {
+  color: red;
+}
+input.amount {
+  width: 4em;
+}
+</style>
+{% endblock %}
+
+{% block title %}
+    Customer Retention Report
+{% endblock %}
+
+{% block content %}
+        <div id="content">
+        <h1>
+           All Subscribers
+        </h1>
+{% if all_subscriber %}
+    <table border="1px" id="myTable" class="tablesorter">
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>Subscriber Name</th>
+            <th>Loans</th>
+            <th>Subscriptions</th> 
+
+            <th>Number of subscriptions and loans</th>
+            <th>Date of last subscription or loan</th>
+
+        </tr>
+        </thead>
+        <tbody>
+        {% for l in all_subscriber %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><a href="{% url 'admin:borrowers_borrower_change' l.borrower.id %}">{{ l.borrower.name_en }} - {{ l.borrower.name_mm }}</a></td>
+            <td>{{ l.loans }}</td>
+            <td>{{ l.subs }}</td>
+            <td>{{ l.number_of_loans }}</td>
+            <td>{{ l.last_loan|date:"d-m-y" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Something wrong.</p>
+{% endif %}
+
+        </div>
+{% endblock %}
+
+{% block javascript %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.29.2/js/jquery.tablesorter.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.29.2/css/theme.default.min.css" type="text/css" media="print, projection, screen" />
+    <script>
+    $(document).ready(function()
+        {
+            $("#myTable").tablesorter();
+        }
+    );
+    </script>
+{% endblock %}
+
+
